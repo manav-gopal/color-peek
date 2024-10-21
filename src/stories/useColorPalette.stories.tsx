@@ -8,10 +8,13 @@ const ColorPaletteDemo = ({
   src?: string;
   imgRef?: React.RefObject<HTMLImageElement>;
 }) => {
+  const start = performance.now();
   const colors = useColorPalette({
     src: src,
     imgRef: imgRef as React.RefObject<HTMLImageElement> | undefined,
-  }); // Type assertion to avoid null
+  });
+  const end = performance.now();
+  console.log(`Time taken to get the color : ${(end - start).toFixed(2)} ms`);
 
   // Handle loading state
   if (colors === null) {

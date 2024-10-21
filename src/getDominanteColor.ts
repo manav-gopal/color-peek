@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 // Helper function to resize the image and draw on canvas
 const resizeImage = (
@@ -134,6 +134,7 @@ interface colors {
   color: number[];
   count: number;
 }
+
 const useColorPalette = ({
   src,
   imgRef,
@@ -141,28 +142,38 @@ const useColorPalette = ({
   src?: string;
   imgRef?: React.RefObject<HTMLImageElement>;
 }) => {
-  if (!src && !imgRef) {
-    console.error('Please provide either a source URL or an image reference');
-  }
-
-  if (!src && imgRef) {
-    console.warn('No source URL provided. Using the image reference instead.');
-  }
   const [colors, setColors] = useState<colors[] | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(document.createElement('canvas'));
 
-  const img = imgRef?.current || new Image();
-  img.crossOrigin = 'Anonymous';
-  if (src) {
-    img.src = src;
-  }
+  useEffect(() => {
+    // Ensure image or imgRef is provided
+    if (!src && !imgRef) {
+      console.error('Please provide either a source URL or an image reference');
+      return;
+    }
 
-  img.onload = () => {
-    const canvas = canvasRef.current;
-    processImageColors(img, canvas, setColors); // Process image when loaded
-  };
+    const img = imgRef?.current || new Image();
+    img.crossOrigin = 'Anonymous';
 
-  return colors; // Return colors directly
+    if (src) {
+      img.src = src;
+    }
+
+    const handleImageLoad = () => {
+      const canvas = canvasRef.current;
+      processImageColors(img, canvas, setColors);
+    };
+
+    // Set the onload handler
+    img.onload = handleImageLoad;
+
+    // Cleanup to prevent memory leaks
+    return () => {
+      img.onload = null;
+    };
+  }, [src, imgRef]); // Only re-run the effect when `src` or `imgRef` changes
+
+  return colors; // Return the colors
 };
 
 export default useColorPalette;
