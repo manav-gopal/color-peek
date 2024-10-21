@@ -1,6 +1,5 @@
 name: CI
 
-# Trigger the workflow on push
 on: [push]
 
 jobs:
@@ -10,28 +9,21 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        node: ['16.x', '18.x', '20.x']
+        node: ['18.x', '20.x'] 
         os: [ubuntu-latest, windows-latest, macOS-latest]
-        exclude:
-          - os: macOS-latest 
-            node: '16.x'
-          - os: macOS-latest
-            node: '18.x'
-          - os: macOS-latest
-            node: '20.x'
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3 
+        uses: actions/checkout@v3
 
       - name: Use Node.js ${{ matrix.node }}
-        uses: actions/setup-node@v3 
+        uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node }}
-          cache: 'yarn' 
+          cache: 'yarn'
 
       - name: Install dependencies and build (with cache)
-        run: yarn install --frozen-lockfile  # Ensuring dependencies are locked
+        run: yarn install --frozen-lockfile
 
       - name: Lint
         run: yarn lint
