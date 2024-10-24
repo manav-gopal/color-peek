@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import useColorPalette from '../getDominanteColor'; // Adjust the import path as necessary
 
-const ColorPaletteDemo = ({
+export const ColorPaletteDemo = ({
   src,
   imgRef,
 }: {

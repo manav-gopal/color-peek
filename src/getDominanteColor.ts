@@ -88,7 +88,7 @@ const mergeSimilarColors = (data: colors[], threshold = 20): colors[] => {
     }
   });
 
-  return mergedData.sort((a, b) => b.count - a.count); // Sort by count
+  return mergedData.sort((a, b) => b.count - a.count); // Sort by count in decreasing order
 };
 
 // Image processing logic extracted into a function
@@ -136,17 +136,17 @@ interface colors {
 }
 
 const useColorPalette = ({
-  src,
-  imgRef,
+  src = undefined,
+  imgRef = undefined,
 }: {
   src?: string;
   imgRef?: React.RefObject<HTMLImageElement>;
 }) => {
   const [colors, setColors] = useState<colors[] | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(document.createElement('canvas'));
-
+  // Ensure image or imgRef is provided
+  
   useEffect(() => {
-    // Ensure image or imgRef is provided
     if (!src && !imgRef) {
       console.error('Please provide either a source URL or an image reference');
       return;
@@ -171,9 +171,9 @@ const useColorPalette = ({
     return () => {
       img.onload = null;
     };
-  }, [src, imgRef]); // Only re-run the effect when `src` or `imgRef` changes
+  }, [src, imgRef?.current]);
 
-  return colors; // Return the colors
+  return colors;
 };
 
 export default useColorPalette;
