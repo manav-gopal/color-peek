@@ -145,7 +145,7 @@ const useColorPalette = ({
   const [colors, setColors] = useState<colors[] | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(document.createElement('canvas'));
   // Ensure image or imgRef is provided
-  
+
   useEffect(() => {
     if (!src && !imgRef) {
       console.error('Please provide either a source URL or an image reference');
@@ -171,7 +171,7 @@ const useColorPalette = ({
     return () => {
       img.onload = null;
     };
-  }, [src, imgRef?.current]);
+  }, [src, imgRef, imgRef?.current]);
 
   return colors;
 };

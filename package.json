@@ -26,15 +26,14 @@
   "scripts": {
     "start": "tsdx watch",
     "prettier:write": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,md,css}\"",
-    "build": "yarn prettier:write && yarn tsdx build && yarn size",
     "test": "npx jest --clearCache && yarn jest",
     "lint": "yarn prettier:write && yarn tsdx lint",
-    "prepare": "tsdx build",
     "size": "size-limit",
-    "analyze": "size-limit --why",
+    "build": "yarn prettier:write && yarn tsdx build && yarn size",
     "start-storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "storybook": "yarn build-storybook && yarn start-storybook"
+    "storybook": "yarn build-storybook && yarn start-storybook",
+    "pre-publish": "yarn test && yarn lint && yarn build"
   },
   "peerDependencies": {
     "react": ">=16"
