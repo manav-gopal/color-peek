@@ -27,13 +27,18 @@ const resizeImage = (
   ctx?.drawImage(img, 0, 0, width, height);
 };
 
-// Helper function to get the color key
-const getColorKey = (r: number, g: number, b: number) =>
-  [Math.round(r / 20), Math.round(g / 20), Math.round(b / 20)].join('-');
+// Helper functions for K-means
 
-// Helper function to calculate average RGB
-const calculateAverageRGB = (colors: number[][]) => {
-  const total = colors.reduce(
+const calculateDistance = (color1: number[], color2: number[]) => {
+  return Math.sqrt(
+    Math.pow(color1[0]! - color2[0]!, 2) +
+      Math.pow(color1[1]! - color2[1]!, 2) +
+      Math.pow(color1[2]! - color2[2]!, 2)
+  );
+};
+
+const calculateMean = (cluster: number[][]) => {
+  const mean = cluster.reduce(
     (acc, color) => [
       acc[0]! + color[0]!,
       acc[1]! + color[1]!,
@@ -41,94 +46,112 @@ const calculateAverageRGB = (colors: number[][]) => {
     ],
     [0, 0, 0]
   );
-  return total.map(sum => Math.round(sum / colors.length));
+  return mean.map(sum => Math.round(sum / cluster.length)) as number[];
 };
 
-// Helper function to merge similar colors
-const mergeSimilarColors = (data: colors[], threshold = 20): colors[] => {
-  const mergedData: colors[] = [];
-  const checkedColor = new Set<number>();
+// Deterministic centroid initialization (Maxmin distance approach for consistent results)
+const getDeterministicCentroids = (colors: number[][], k: number) => {
+  const centroids: number[][] = [];
+  if (colors.length === 0) return centroids;
 
-  data.forEach((colorObj, index) => {
-    if (!checkedColor.has(index)) {
-      const similarColors: colors[] = [colorObj];
+  // 1. Pick the first sampled color as the first centroid
+  centroids.push(colors[0]!);
 
-      for (let i = index + 1; i < data.length; i++) {
-        const keyColor = data[i];
-        if (
-          keyColor &&
-          Math.abs(keyColor.color[0]! - colorObj.color[0]!) <= threshold &&
-          Math.abs(keyColor.color[1]! - colorObj.color[1]!) <= threshold &&
-          Math.abs(keyColor.color[2]! - colorObj.color[2]!) <= threshold
-        ) {
-          similarColors.push(keyColor);
-          checkedColor.add(i);
-        }
+  // 2. Pick the remaining k-1 centroids by maximizing the minimum distance to existing centroids
+  for (let i = 1; i < k; i++) {
+    let maxDist = -1;
+    let bestColor = colors[0]!;
+
+    for (const color of colors) {
+      let minDist = Infinity;
+      for (const centroid of centroids) {
+        const dist = calculateDistance(color, centroid);
+        if (dist < minDist) minDist = dist;
       }
-
-      const [r, g, b, totalCount] = similarColors.reduce(
-        ([r, g, b, totalCount], obj) => [
-          r + (obj.color[0] ?? 0),
-          g + (obj.color[1] ?? 0),
-          b + (obj.color[2] ?? 0),
-          totalCount + obj.count,
-        ],
-        [0, 0, 0, 0]
-      );
-
-      mergedData.push({
-        colorKey: similarColors[0]?.colorKey ?? '',
-        color: [
-          Math.round(r / similarColors.length),
-          Math.round(g / similarColors.length),
-          Math.round(b / similarColors.length),
-        ],
-        count: totalCount,
-      });
+      if (minDist > maxDist) {
+        maxDist = minDist;
+        bestColor = color;
+      }
     }
-  });
+    centroids.push(bestColor);
+  }
 
-  return mergedData.sort((a, b) => b.count - a.count); // Sort by count in decreasing order
+  return centroids;
 };
 
-// Image processing logic extracted into a function
+// K-means clustering algorithm for color clustering
+const kMeansClustering = (colors: number[][], k: number) => {
+  let centroids = getDeterministicCentroids(colors, k);
+  let clusters: number[][][] = Array.from({ length: k }, () => []);
+  let change = true;
+  let iterations = 0;
+  const maxIterations = 20;
+
+  while (change && iterations < maxIterations) {
+    clusters = Array.from({ length: k }, () => []);
+    
+    // Assign colors to the closest centroid
+    colors.forEach(color => {
+      let minDistance = Infinity;
+      let closestCentroid = 0;
+      centroids.forEach((centroid, index) => {
+        const distance = calculateDistance(color, centroid);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestCentroid = index;
+        }
+      });
+      clusters[closestCentroid]!.push(color);
+    });
+
+    // Calculate new centroids
+    const newCentroids = clusters.map((cluster, index) => {
+      if (cluster.length === 0) return centroids[index]!;
+      return calculateMean(cluster);
+    });
+    
+    // Check for convergence
+    change = !centroids.every((centroid, index) =>
+      centroid.every((value, i) => value === newCentroids[index]![i])
+    );
+    centroids = newCentroids;
+    iterations++;
+  }
+
+  // Map to the required output format
+  return centroids.map((centroid, index) => ({
+    colorKey: centroid.join('-'),
+    color: centroid,
+    count: clusters[index]?.length ?? 0,
+  }));
+};
+
+// Image processing logic using K-means for color extraction
 const processImageColors = (
   img: HTMLImageElement,
   canvas: HTMLCanvasElement,
-  setColors: React.Dispatch<React.SetStateAction<colors[] | null>>
+  setColors: React.Dispatch<React.SetStateAction<colors[] | null>>,
+  k = 3 // Set number of clusters
 ) => {
   resizeImage(img, canvas, 100, 100); // Resize image to fit into 100x100
 
   const ctx = canvas.getContext('2d');
   const imageData = ctx?.getImageData(0, 0, canvas.width, canvas.height);
   const data = imageData?.data;
-  const colorCount: Record<string, number[][]> = {};
+  const colors: number[][] = [];
   const step = 10; // Sample every 10th pixel for performance
 
   if (data) {
     for (let i = 0; i < data.length; i += 4 * step) {
-      const [r, g, b] = [data[i]!, data[i + 1]!, data[i + 2]!];
-      const key = getColorKey(r, g, b);
-
-      if (!colorCount[key]) colorCount[key] = [];
-      colorCount[key].push([r, g, b]);
+      colors.push([data[i]!, data[i + 1]!, data[i + 2]!]);
     }
   }
 
-  const sortedColors = Object.entries(colorCount)
-    .sort((a, b) => b[1].length - a[1].length)
-    .filter(([, colorArray]) => colorArray.length >= 4)
-    .map(([key, colorArray]) => ({
-      colorKey: key,
-      color: calculateAverageRGB(colorArray),
-      count: colorArray.length,
-    }));
-
-  const mergedColors = mergeSimilarColors(sortedColors);
-  setColors(mergedColors); // Update the state with the final colors
+  const clusteredColors = kMeansClustering(colors, k);
+  setColors(clusteredColors.sort((a, b) => b.count - a.count));
 };
 
-// The main hook to extract colors
+// The main hook to extract colors using K-means clustering
 interface colors {
   colorKey: string;
   color: number[];
@@ -144,7 +167,6 @@ const useColorPalette = ({
 }) => {
   const [colors, setColors] = useState<colors[] | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(document.createElement('canvas'));
-  // Ensure image or imgRef is provided
 
   useEffect(() => {
     if (!src && !imgRef) {
@@ -152,24 +174,44 @@ const useColorPalette = ({
       return;
     }
 
-    const img = imgRef?.current || new Image();
-    img.crossOrigin = 'Anonymous';
+    const imageSrc = src || imgRef?.current?.src;
+    if (!imageSrc) return;
 
-    if (src) {
-      img.src = src;
-    }
+    let isProxyTried = false;
+    let objectUrl: string | null = null;
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
 
     const handleImageLoad = () => {
       const canvas = canvasRef.current;
       processImageColors(img, canvas, setColors);
     };
 
-    // Set the onload handler
-    img.onload = handleImageLoad;
+    const handleImageError = () => {
+      // Browsers physically block JavaScript from reading pixels of cross-origin images 
+      // without CORS headers (like Freepik) for security. We cannot bypass this natively.
+      // As a free, unlimited workaround, we route the image through a public image 
+      // processing CDN (images.weserv.nl) which attaches valid CORS headers for our canvas.
+      if (!isProxyTried && imageSrc.startsWith('http')) {
+        isProxyTried = true;
+        img.src = `https://images.weserv.nl/?url=${encodeURIComponent(imageSrc)}`;
+      } else {
+        console.error('Failed to load image for color extraction across origins');
+        setColors([]);
+      }
+    };
 
-    // Cleanup to prevent memory leaks
+    img.onload = handleImageLoad;
+    img.onerror = handleImageError;
+    img.src = imageSrc;
+
+    // Cleanup to prevent memory leaks and clear object URL
     return () => {
       img.onload = null;
+      img.onerror = null;
+      if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+      }
     };
   }, [src, imgRef, imgRef?.current]);
 
