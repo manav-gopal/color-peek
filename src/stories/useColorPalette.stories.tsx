@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import useColorPalette from '../getDominanteColor';
+import React, { useEffect, useRef, useState } from 'react';
+import { getColorPalette, Colors } from '../getDominanteColor';
 
 export const ColorPaletteDemo = ({
   src,
@@ -8,42 +8,66 @@ export const ColorPaletteDemo = ({
   src?: string;
   imgRef?: React.RefObject<HTMLImageElement>;
 }) => {
-  const start = performance.now();
-  const colors = useColorPalette({
-    src: src,
-    imgRef: imgRef as React.RefObject<HTMLImageElement> | undefined,
-  });
-  const end = performance.now();
-  console.log(`Time taken to get the color : ${(end - start).toFixed(2)} ms`);
+  const [colors, setColors] = useState<Colors[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    // Reset state when inputs change
+    setColors(null);
+    setError(null);
+
+    getColorPalette({ src, imgElement: imgRef?.current })
+      .then(extractedColors => {
+        if (active) setColors(extractedColors);
+      })
+      .catch(err => {
+        if (active) setError(err.message);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [src, imgRef]);
 
   // Handle loading state
-  if (colors === null) {
-    return <p>Loading colors...</p>; // Show loading message while colors are being fetched
+  if (colors === null && !error) {
+    return <p>Loading colors...</p>;
   }
 
   // Handle error state
-  if (colors === undefined) {
-    return <p>Error loading colors. Please check the image URL.</p>; // Error message
+  if (error) {
+    return <p>Error loading colors: {error}</p>;
+  }
+
+  // Handle empty state
+  if (colors?.length === 0) {
+    return <p>No colors found. Please check the image.</p>;
   }
 
   return (
     <div>
-      {colors.length > 0 ? ( // Check if colors is not empty
-        colors.map((colorObj, index) => (
-          <div
-            key={index}
-            style={{
-              backgroundColor: `rgb(${colorObj.color.join(',')})`,
-              padding: '10px',
-              margin: '5px',
-            }}
-          >
-            {colorObj.colorKey} - Count: {colorObj.count}
+      <h3>Dominant Colors</h3>
+      <div style={{ display: 'flex', gap: '10px' }}>
+        {colors?.map((colorObj: Colors, index: number) => (
+          <div key={index} style={{ textAlign: 'center' }}>
+            <div
+              style={{
+                width: '50px',
+                height: '50px',
+                backgroundColor: `rgb(${colorObj.color.join(',')})`,
+                borderRadius: '8px',
+                border: '1px solid #ddd',
+              }}
+              title={colorObj.colorKey} // Tooltip to show the color tuple
+            />
+            <p style={{ fontSize: '12px', marginTop: '5px' }}>
+              {colorObj.colorKey}
+            </p>
           </div>
-        ))
-      ) : (
-        <p>No colors found. Please check the image.</p> // Message for no colors
-      )}
+        ))}
+      </div>
     </div>
   );
 };

@@ -1,5 +1,3 @@
-import { useEffect, useRef, useState } from 'react';
-
 // Helper function to resize the image and draw on canvas
 const resizeImage = (
   img: HTMLImageElement,
@@ -12,12 +10,15 @@ const resizeImage = (
 
   if (width > height) {
     if (width > maxWidth) {
-      height *= maxWidth / width;
+      height *= Math.round(maxWidth / width);
+      // fallback in case of rounding zeroes
+      if (height === 0) height = 1;
       width = maxWidth;
     }
   } else {
     if (height > maxHeight) {
-      width *= maxHeight / height;
+      width *= Math.round(maxHeight / height);
+      if (width === 0) width = 1;
       height = maxHeight;
     }
   }
@@ -28,7 +29,6 @@ const resizeImage = (
 };
 
 // Helper functions for K-means
-
 const calculateDistance = (color1: number[], color2: number[]) => {
   return Math.sqrt(
     Math.pow(color1[0]! - color2[0]!, 2) +
@@ -126,13 +126,12 @@ const kMeansClustering = (colors: number[][], k: number) => {
   }));
 };
 
-// Image processing logic using K-means for color extraction
-const processImageColors = (
+// Internal synchronous logic using K-means for color extraction off a loaded image buffer
+const extractColorsFromImage = (
   img: HTMLImageElement,
-  canvas: HTMLCanvasElement,
-  setColors: React.Dispatch<React.SetStateAction<colors[] | null>>,
   k = 3 // Set number of clusters
-) => {
+): Colors[] => {
+  const canvas = document.createElement('canvas');
   resizeImage(img, canvas, 100, 100); // Resize image to fit into 100x100
 
   const ctx = canvas.getContext('2d');
@@ -148,78 +147,90 @@ const processImageColors = (
   }
 
   const clusteredColors = kMeansClustering(colors, k);
-  setColors(clusteredColors.sort((a, b) => b.count - a.count));
+  return clusteredColors.sort((a, b) => b.count - a.count);
 };
 
-// The main hook to extract colors using K-means clustering
-interface colors {
+export interface Colors {
   colorKey: string;
   color: number[];
   count: number;
 }
 
-const useColorPalette = ({
-  src = undefined,
-  imgRef = undefined,
-}: {
+export interface ColorPaletteOptions {
   src?: string;
-  imgRef?: React.RefObject<HTMLImageElement>;
-}) => {
-  const [colors, setColors] = useState<colors[] | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(document.createElement('canvas'));
+  imgElement?: HTMLImageElement | null;
+}
 
-  useEffect(() => {
-    if (!src && !imgRef) {
-      console.error('Please provide either a source URL or an image reference');
-      return;
-    }
+/**
+ * Extracts a dominant color palette from an image using deterministic K-Means clustering.
+ *
+ * @param options Object containing either an image `src` URL to fetch, or an active `imgElement` DOM node.
+ * @returns A Promise resolving to an array of Colors containing RGB arrays and bucket densities.
+ */
+const getColorPalette = async (
+  options: ColorPaletteOptions
+): Promise<Colors[]> => {
+  const { src, imgElement } = options;
 
-    const imageSrc = src || imgRef?.current?.src;
-    if (!imageSrc) return;
+  if (!src && !imgElement) {
+    return Promise.reject(
+      new Error(
+        'Please provide either a source URL or an image element reference.'
+      )
+    );
+  }
 
+  const targetSrc = src || imgElement?.src;
+
+  if (!targetSrc) {
+    return Promise.reject(new Error('No valid image src found.'));
+  }
+
+  return new Promise((resolve, reject) => {
     let isProxyTried = false;
     let objectUrl: string | null = null;
+
     const img = new Image();
     img.crossOrigin = 'Anonymous';
 
-    const handleImageLoad = () => {
-      const canvas = canvasRef.current;
-      processImageColors(img, canvas, setColors);
-    };
-
-    const handleImageError = () => {
-      // Browsers physically block JavaScript from reading pixels of cross-origin images
-      // without CORS headers (like Freepik) for security. We cannot bypass this natively.
-      // As a free, unlimited workaround, we route the image through a public image
-      // processing CDN (images.weserv.nl) which attaches valid CORS headers for our canvas.
-      if (!isProxyTried && imageSrc.startsWith('http')) {
-        isProxyTried = true;
-        img.src = `https://images.weserv.nl/?url=${encodeURIComponent(
-          imageSrc
-        )}`;
-      } else {
-        console.error(
-          'Failed to load image for color extraction across origins'
-        );
-        setColors([]);
-      }
-    };
-
-    img.onload = handleImageLoad;
-    img.onerror = handleImageError;
-    img.src = imageSrc;
-
-    // Cleanup to prevent memory leaks and clear object URL
-    return () => {
+    const handleSuccessCleanup = () => {
       img.onload = null;
       img.onerror = null;
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+
+    img.onload = () => {
+      try {
+        const colors = extractColorsFromImage(img);
+        handleSuccessCleanup();
+        resolve(colors);
+      } catch (err) {
+        handleSuccessCleanup();
+        reject(err);
       }
     };
-  }, [src, imgRef, imgRef?.current]);
 
-  return colors;
+    img.onerror = () => {
+      // Browsers physically block JavaScript from reading pixels of cross-origin images
+      // without CORS headers (like Freepik) for security. We cannot bypass this natively.
+      // As a free, unlimited workaround, we route the image through a public image CDN proxy (images.weserv.nl).
+      if (!isProxyTried && targetSrc.startsWith('http')) {
+        isProxyTried = true;
+        img.src = `https://images.weserv.nl/?url=${encodeURIComponent(
+          targetSrc
+        )}`;
+      } else {
+        handleSuccessCleanup();
+        reject(
+          new Error(
+            `Failed to load image for color extraction from source: ${targetSrc}`
+          )
+        );
+      }
+    };
+
+    img.src = targetSrc;
+  });
 };
 
-export default useColorPalette;
+export { getColorPalette };

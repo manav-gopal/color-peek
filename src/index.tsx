@@ -1,1 +1,1 @@
-export { default as useColorPalette } from './getDominanteColor';
+export { getColorPalette } from './getDominanteColor';

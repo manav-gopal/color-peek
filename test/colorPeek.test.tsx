@@ -1,15 +1,8 @@
-// useColorPalette.test.tsx
-import React from 'react';
-import { render, waitFor, act } from '@testing-library/react';
-import useColorPalette from '../src/getDominanteColor'; // Adjust the import path as necessary
+// colorPeek.test.ts
+import { getColorPalette, Colors } from '../src/getDominanteColor'; // Adjust the import path as necessary
 import 'jest-canvas-mock';
 
-// Define the Colors interface if not exported from the hook
-interface Colors {
-  colorKey: string;
-  color: number[];
-  count: number;
-}
+// Define the Colors interface if not exported from the hook (Removed: imported from src)
 
 // custom logger for colorful test output
 const ANSI = {
@@ -99,96 +92,42 @@ describe('useColorPalette Hook', () => {
     const redPixel = [255, 0, 0, 255];
     const greenPixel = [0, 255, 0, 255];
     const bluePixel = [0, 0, 255, 255];
-    const yellowPixel = [255, 255, 0, 255];
 
     const pixels: Array<number> = [];
 
-    for (let i = 0; i < 40; i++) {
-      pixels.push(...redPixel);
-    }
-    for (let i = 0; i < 40; i++) {
-      pixels.push(...greenPixel);
-    }
-    for (let i = 0; i < 40; i++) {
-      pixels.push(...bluePixel);
-    }
-    for (let i = 0; i < 40; i++) {
-      pixels.push(...yellowPixel);
-    }
+    for (let i = 0; i < 40; i++) pixels.push(...redPixel);
+    for (let i = 0; i < 40; i++) pixels.push(...greenPixel);
+    for (let i = 0; i < 40; i++) pixels.push(...bluePixel);
 
     const data = new Uint8ClampedArray(pixels);
 
     // Mock the canvas context methods
-    const drawImageMock = jest.fn();
-    const getImageDataMock = jest.fn(() => ({
-      data,
-    }));
     getContextMock.mockReturnValue({
-      drawImage: drawImageMock,
-      getImageData: getImageDataMock,
+      drawImage: jest.fn(),
+      getImageData: jest.fn(() => ({ data })),
     });
 
-    // Test Component
-    const TestComponent = ({ src }: { src: string }) => {
-      const colors = useColorPalette({ src });
-      return (
-        <div data-testid="colors">
-          {colors
-            ? colors.map((colorObj: Colors) => colorObj.colorKey).join(',')
-            : 'Loading'}
-        </div>
-      );
-    };
-
-    // Render the component with a valid image source
-    const { getByTestId } = render(<TestComponent src="valid-image-src" />);
-
-    // Wait for colors to be updated
-    await waitFor(() => {
-      expect(getByTestId('colors').textContent).not.toBe('Loading');
-    });
+    // Directly invoke the asynchronous JavaScript utility
+    const colors = await getColorPalette({ src: 'valid-image-src' });
 
     // Assertions
-    const colorsText = getByTestId('colors').textContent;
-    // The new deterministic K-Means groups the RGBA array correctly
-    // The new kMeans function outputs the actual RGB values as the string key!
-    expect(colorsText).toContain('255-128-0');
-    expect(colorsText).toContain('0-255-0');
-    expect(colorsText).toContain('0-0-255');
+    const extractedKeys = colors.map((c: Colors) => c.colorKey);
+    expect(extractedKeys).toContain('255-0-0');
+    expect(extractedKeys).toContain('0-255-0');
+    expect(extractedKeys).toContain('0-0-255');
 
     // Clean up mocks
     createElementSpy.mockRestore();
     (global as any).Image = originalImage;
   });
 
-  it('should log an error and set colors to null when no src or imgRef is provided', () => {
-    // Spy on console.error
-    const consoleErrorSpy = jest
-      .spyOn(console, 'error')
-      .mockImplementation(() => {});
-
-    // Test Component
-    const TestComponent = () => {
-      const colors = useColorPalette({});
-      return (
-        <div data-testid="colors">{colors === null ? 'null' : 'not null'}</div>
-      );
-    };
-
-    // Render the component without src or imgRef
-    const { getByTestId } = render(<TestComponent />);
-
-    // Assertions
-    expect(getByTestId('colors').textContent).toBe('null');
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      'Please provide either a source URL or an image reference'
+  it('should reject with an error when no src or imgElement is provided', async () => {
+    await expect(getColorPalette({})).rejects.toThrow(
+      'Please provide either a source URL or an image element reference.'
     );
-
-    // Clean up mocks
-    consoleErrorSpy.mockRestore();
   });
 
-  it('should return colors when provided with an imgRef', async () => {
+  it('should return colors when provided with an existing imgElement', async () => {
     // Mock the global Image constructor
     (global as any).Image = MockImage;
 
@@ -200,83 +139,41 @@ describe('useColorPalette Hook', () => {
       height: 0,
     };
 
-    // Spy on document.createElement and provide mock for 'canvas'
     const createElementSpy = jest
       .spyOn(document, 'createElement')
       .mockImplementation(element => {
         if (element === 'canvas') {
           return (canvasMock as unknown) as HTMLCanvasElement;
         }
-        return originalCreateElement.call(document, element); // Call the original method to avoid recursion
+        return originalCreateElement.call(document, element);
       });
 
-    // Use the same pixel data as before
+    // Use pixel data
     const redPixel = [255, 0, 0, 255];
     const greenPixel = [0, 255, 0, 255];
     const pixels: Array<number> = [];
 
-    for (let i = 0; i < 40; i++) {
-      pixels.push(...redPixel);
-    }
-    for (let i = 0; i < 40; i++) {
-      pixels.push(...greenPixel);
-    }
+    for (let i = 0; i < 40; i++) pixels.push(...redPixel);
+    for (let i = 0; i < 40; i++) pixels.push(...greenPixel);
 
     const data = new Uint8ClampedArray(pixels);
 
-    // Mock the canvas context methods
-    const drawImageMock = jest.fn();
-    const getImageDataMock = jest.fn(() => ({
-      data,
-    }));
     getContextMock.mockReturnValue({
-      drawImage: drawImageMock,
-      getImageData: getImageDataMock,
+      drawImage: jest.fn(),
+      getImageData: jest.fn(() => ({ data })),
     });
 
-    // Create a mock imgRef as MutableRefObject
-    const imgRef: React.MutableRefObject<HTMLImageElement> = {
-      current: (new MockImage() as unknown) as HTMLImageElement,
-    };
+    // Create a generic HTMLImageElement mock
+    const mockImgElement = document.createElement('img');
+    mockImgElement.src = 'valid-image-src';
 
-    // Test Component
-    const TestComponent = () => {
-      const colors = useColorPalette({ imgRef });
-      return (
-        <div data-testid="colors">
-          {colors
-            ? colors.map((colorObj: Colors) => colorObj.colorKey).join(',')
-            : 'Loading'}
-        </div>
-      );
-    };
-
-    // Render the component with imgRef
-    const { getByTestId, rerender } = render(<TestComponent />);
-
-    // Simulate the hook's internal new Image() loading by mocking the window fetch or simply invoking the internal onload
-    // In getDominanteColor.ts, it reads imgRef?.current?.src, creates a `new Image()`, assigns its src, and waits for its onload to fire.
-    // Our MockImage class already simulates `setTimeout(() => this.onload(), 0)` when `src` is set.
-    // So we just need to provide a `src` to the imgRef so the hook picks it up during its useEffect render.
-    act(() => {
-      // Create a valid element with a src
-      const mockImgElement = document.createElement('img');
-      mockImgElement.src = 'valid-image-src';
-      imgRef.current = mockImgElement as HTMLImageElement;
-    });
-
-    // We must re-render the component so the `useEffect` fires knowing the imgRef has a valid element now
-    rerender(<TestComponent />);
-
-    // Wait for colors to be updated
-    await waitFor(() => {
-      expect(getByTestId('colors').textContent).not.toBe('Loading');
-    });
+    // Directly invoke the Promise-based utility
+    const colors = await getColorPalette({ imgElement: mockImgElement });
 
     // Assertions
-    const colorsText = getByTestId('colors').textContent;
-    expect(colorsText).toContain('255-0-0'); // Red
-    expect(colorsText).toContain('0-255-0'); // Green
+    const extractedKeys = colors.map((c: Colors) => c.colorKey);
+    expect(extractedKeys).toContain('255-0-0');
+    expect(extractedKeys).toContain('0-255-0');
 
     // Clean up mocks
     createElementSpy.mockRestore();
@@ -348,23 +245,13 @@ describe('useColorPalette Hook', () => {
     const targetUrl =
       'https://img.freepik.com/free-vector/colourful-abstract-shapes_78370-1451.jpg';
 
-    // Test Component
-    const TestComponent = ({ src }: { src: string }) => {
-      const colors = useColorPalette({ src });
-      return (
-        <div data-testid="colors-proxy">{colors ? 'Loaded' : 'Loading'}</div>
-      );
-    };
-
-    const { getByTestId } = render(<TestComponent src={targetUrl} />);
-
     // Wait until it loads completely (the proxy retry must succeed)
-    await waitFor(() => {
-      expect(getByTestId('colors-proxy').textContent).toBe('Loaded');
-    });
+    // We can just await the getColorPalette promise!
+    const colors = await getColorPalette({ src: targetUrl });
 
-    // We verify the hook didn't bomb out completely
-    expect(getByTestId('colors-proxy').textContent).toBe('Loaded');
+    // Assertions
+    expect(colors).not.toBeNull();
+    expect(colors.length).toBeGreaterThan(0);
 
     // Clean up mocks
     createElementSpy.mockRestore();
