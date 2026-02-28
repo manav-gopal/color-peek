@@ -89,7 +89,7 @@ const kMeansClustering = (colors: number[][], k: number) => {
 
   while (change && iterations < maxIterations) {
     clusters = Array.from({ length: k }, () => []);
-    
+
     // Assign colors to the closest centroid
     colors.forEach(color => {
       let minDistance = Infinity;
@@ -109,7 +109,7 @@ const kMeansClustering = (colors: number[][], k: number) => {
       if (cluster.length === 0) return centroids[index]!;
       return calculateMean(cluster);
     });
-    
+
     // Check for convergence
     change = !centroids.every((centroid, index) =>
       centroid.every((value, i) => value === newCentroids[index]![i])
@@ -188,15 +188,19 @@ const useColorPalette = ({
     };
 
     const handleImageError = () => {
-      // Browsers physically block JavaScript from reading pixels of cross-origin images 
+      // Browsers physically block JavaScript from reading pixels of cross-origin images
       // without CORS headers (like Freepik) for security. We cannot bypass this natively.
-      // As a free, unlimited workaround, we route the image through a public image 
+      // As a free, unlimited workaround, we route the image through a public image
       // processing CDN (images.weserv.nl) which attaches valid CORS headers for our canvas.
       if (!isProxyTried && imageSrc.startsWith('http')) {
         isProxyTried = true;
-        img.src = `https://images.weserv.nl/?url=${encodeURIComponent(imageSrc)}`;
+        img.src = `https://images.weserv.nl/?url=${encodeURIComponent(
+          imageSrc
+        )}`;
       } else {
-        console.error('Failed to load image for color extraction across origins');
+        console.error(
+          'Failed to load image for color extraction across origins'
+        );
         setColors([]);
       }
     };
@@ -210,7 +214,7 @@ const useColorPalette = ({
       img.onload = null;
       img.onerror = null;
       if (objectUrl) {
-          URL.revokeObjectURL(objectUrl);
+        URL.revokeObjectURL(objectUrl);
       }
     };
   }, [src, imgRef, imgRef?.current]);

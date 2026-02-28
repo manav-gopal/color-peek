@@ -3,7 +3,7 @@ import useColorPalette from '../getDominanteColor';
 
 export const ColorPaletteDemo = ({
   src,
-  imgRef
+  imgRef,
 }: {
   src?: string;
   imgRef?: React.RefObject<HTMLImageElement>;
@@ -21,7 +21,7 @@ export const ColorPaletteDemo = ({
     return <p>Loading colors...</p>; // Show loading message while colors are being fetched
   }
 
-  // Handle error state  
+  // Handle error state
   if (colors === undefined) {
     return <p>Error loading colors. Please check the image URL.</p>; // Error message
   }
