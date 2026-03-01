@@ -1,8 +1,10 @@
 # Color Peek 🎨
 
-A lightweight, highly accurate custom JavaScript package (`getColorPalette`) for asynchronously extracting the dominant color palette from any image using deterministic K-Means clustering.
+[![Live Demo color-analyzer](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/p/sandbox/color-picker-ts-fyl2dh)
 
-Built to be **framework-agnostic**: use it in React, Vue, Angular, Node, or Vanilla JS! Works seamlessly with cross-origin images by automatically routing CORS-blocked requests through a secure `images.weserv.nl` proxy fallback.
+A lightweight, highly accurate custom JavaScript package (`getColorPalette` and `useColorPalette`) for asynchronously extracting the dominant color palette from any image using deterministic K-Means clustering.
+
+Built to be **framework-agnostic**: use `getColorPalette` in Vue, Angular, Node, or Vanilla JS. Or use the built-in React hook `useColorPalette` for seamless state management! Works perfectly with cross-origin images by automatically routing CORS-blocked requests through a secure `images.weserv.nl` proxy fallback.
 
 ## Installation
 
@@ -86,6 +88,42 @@ const ImageCard = () => {
           ))}
         </div>
       )}
+    </div>
+  );
+};
+```
+
+### 3. React Hook Usage (`useColorPalette`)
+
+For the best experience in React, you can use the built-in hook which manages loading, extracted colors, and error states internally for you!
+
+```tsx
+import React, { useEffect } from 'react';
+import { useColorPalette } from 'color-peek';
+
+export const ColorPaletteDemo = ({ src }) => {
+  const { colors, loading, error, extract } = useColorPalette();
+
+  useEffect(() => {
+    extract({ src });
+  }, [src, extract]);
+
+  if (loading) return <p>Loading colors...</p>;
+  if (error) return <p>Error loading colors: {error}</p>;
+  if (!colors || colors.length === 0) return <p>No colors found.</p>;
+
+  return (
+    <div style={{ display: 'flex', gap: '10px' }}>
+      {colors.map((c, index) => (
+        <div
+          key={index}
+          style={{
+            width: '50px',
+            height: '50px',
+            backgroundColor: `rgb(${c.color.join(',')})`,
+          }}
+        />
+      ))}
     </div>
   );
 };
