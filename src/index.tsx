@@ -3,3 +3,5 @@ export {
   ColorsType,
   ColorPaletteOptionsType,
 } from './getDominanteColor';
+
+export { useColorPalette } from './useColorPalette';

@@ -25,7 +25,9 @@ const resizeImage = (
 
   canvas.width = width;
   canvas.height = height;
-  ctx?.drawImage(img, 0, 0, width, height);
+  if (ctx) {
+    ctx.drawImage(img, 0, 0, width, height);
+  }
 };
 
 // Helper functions for K-means
@@ -134,11 +136,14 @@ const kMeansClustering = (colors: number[][], k: number) => {
   }
 
   // Map to the required output format
-  return centroids.map((centroid, index) => ({
-    colorKey: centroid.join('-'),
-    color: centroid,
-    count: clusters[index]?.length ?? 0,
-  }));
+  return centroids.map((centroid, index) => {
+    const count = clusters[index] ? clusters[index]!.length : 0;
+    return {
+      colorKey: centroid.join('-'),
+      color: centroid,
+      count,
+    };
+  });
 };
 
 // Internal synchronous logic using K-means for color extraction off a loaded image buffer
@@ -150,8 +155,10 @@ const extractColorsFromImage = (
   resizeImage(img, canvas, 100, 100); // Resize image to fit into 100x100
 
   const ctx = canvas.getContext('2d');
-  const imageData = ctx?.getImageData(0, 0, canvas.width, canvas.height);
-  const data = imageData?.data;
+  const imageData = ctx
+    ? ctx.getImageData(0, 0, canvas.width, canvas.height)
+    : null;
+  const data = imageData ? imageData.data : null;
   const colors: number[][] = [];
   const step = 10; // Sample every 10th pixel for performance
 
@@ -195,7 +202,7 @@ export const getColorPalette = async (
     );
   }
 
-  const targetSrc = src || imgElement?.src;
+  const targetSrc = src || (imgElement ? imgElement.src : undefined);
 
   if (!targetSrc) {
     return Promise.reject(new Error('No valid image src found.'));

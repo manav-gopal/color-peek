@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { getColorPalette, ColorsType } from '../getDominanteColor';
+import React, { useEffect, useRef } from 'react';
+import { ColorsType } from '../getDominanteColor';
+import { useColorPalette } from '../useColorPalette';
 
 export const ColorPaletteDemo = ({
   src,
@@ -8,31 +9,14 @@ export const ColorPaletteDemo = ({
   src?: string;
   imgRef?: React.RefObject<HTMLImageElement>;
 }) => {
-  const [colors, setColors] = useState<ColorsType[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { colors, loading, error, extract } = useColorPalette();
 
   useEffect(() => {
-    let active = true;
-
-    // Reset state when inputs change
-    setColors(null);
-    setError(null);
-
-    getColorPalette({ src, imgElement: imgRef?.current })
-      .then(extractedColors => {
-        if (active) setColors(extractedColors);
-      })
-      .catch(err => {
-        if (active) setError(err.message);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [src, imgRef]);
+    extract({ src, imgElement: imgRef ? imgRef.current : undefined });
+  }, [src, imgRef, extract]);
 
   // Handle loading state
-  if (colors === null && !error) {
+  if (loading) {
     return <p>Loading colors...</p>;
   }
 
@@ -42,7 +26,7 @@ export const ColorPaletteDemo = ({
   }
 
   // Handle empty state
-  if (colors?.length === 0) {
+  if (!colors || colors.length === 0) {
     return <p>No colors found. Please check the image.</p>;
   }
 
@@ -50,7 +34,7 @@ export const ColorPaletteDemo = ({
     <div>
       <h3>Dominant Colors</h3>
       <div style={{ display: 'flex', gap: '10px' }}>
-        {colors?.map((colorObj: ColorsType, index: number) => (
+        {colors.map((colorObj: ColorsType, index: number) => (
           <div key={index} style={{ textAlign: 'center' }}>
             <div
               style={{
