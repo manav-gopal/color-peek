@@ -1,6 +1,6 @@
 {
   "name": "color-peek",
-  "version": "0.4.0-alpha",
+  "version": "0.4.1-alpha",
   "main": "dist/index.js",
   "module": "dist/index.esm.js",
   "author": "manav",
@@ -27,13 +27,14 @@
     "start": "tsdx watch",
     "prettier:write": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,md,css}\"",
     "test": "npx jest --clearCache && yarn jest",
-    "lint": "yarn prettier:write && yarn tsdx lint",
+    "lint": "yarn prettier:write && yarn tsdx lint src",
     "size": "size-limit",
     "build": "yarn prettier:write && yarn tsdx build && yarn size",
     "start-storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "storybook": "yarn build-storybook && yarn start-storybook",
-    "pre-publish": "yarn test && yarn lint && yarn build"
+    "pre-publish": "yarn test && yarn lint && yarn build",
+    "publish": "yarn pre-publish && yarn publish"
   },
   "peerDependencies": {
     "react": ">=16"

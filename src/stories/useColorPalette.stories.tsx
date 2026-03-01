@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { getColorPalette, Colors } from '../getDominanteColor';
+import { getColorPalette, ColorsType } from '../getDominanteColor';
 
 export const ColorPaletteDemo = ({
   src,
@@ -8,7 +8,7 @@ export const ColorPaletteDemo = ({
   src?: string;
   imgRef?: React.RefObject<HTMLImageElement>;
 }) => {
-  const [colors, setColors] = useState<Colors[] | null>(null);
+  const [colors, setColors] = useState<ColorsType[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export const ColorPaletteDemo = ({
     <div>
       <h3>Dominant Colors</h3>
       <div style={{ display: 'flex', gap: '10px' }}>
-        {colors?.map((colorObj: Colors, index: number) => (
+        {colors?.map((colorObj: ColorsType, index: number) => (
           <div key={index} style={{ textAlign: 'center' }}>
             <div
               style={{

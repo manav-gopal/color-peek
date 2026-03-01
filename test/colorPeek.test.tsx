@@ -1,5 +1,5 @@
 // colorPeek.test.ts
-import { getColorPalette, Colors } from '../src/getDominanteColor'; // Adjust the import path as necessary
+import { getColorPalette, ColorsType } from '../src/getDominanteColor'; // Adjust the import path as necessary
 import 'jest-canvas-mock';
 
 // Define the Colors interface if not exported from the hook (Removed: imported from src)
@@ -111,7 +111,7 @@ describe('useColorPalette Hook', () => {
     const colors = await getColorPalette({ src: 'valid-image-src' });
 
     // Assertions
-    const extractedKeys = colors.map((c: Colors) => c.colorKey);
+    const extractedKeys = colors.map((c: ColorsType) => c.colorKey);
     expect(extractedKeys).toContain('255-0-0');
     expect(extractedKeys).toContain('0-255-0');
     expect(extractedKeys).toContain('0-0-255');
@@ -171,7 +171,7 @@ describe('useColorPalette Hook', () => {
     const colors = await getColorPalette({ imgElement: mockImgElement });
 
     // Assertions
-    const extractedKeys = colors.map((c: Colors) => c.colorKey);
+    const extractedKeys = colors.map((c: ColorsType) => c.colorKey);
     expect(extractedKeys).toContain('255-0-0');
     expect(extractedKeys).toContain('0-255-0');
 

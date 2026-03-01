@@ -91,29 +91,44 @@ const kMeansClustering = (colors: number[][], k: number) => {
     clusters = Array.from({ length: k }, () => []);
 
     // Assign colors to the closest centroid
-    colors.forEach(color => {
+    for (let c = 0; c < colors.length; c++) {
+      const color = colors[c]!;
       let minDistance = Infinity;
       let closestCentroid = 0;
-      centroids.forEach((centroid, index) => {
-        const distance = calculateDistance(color, centroid);
+      for (let i = 0; i < centroids.length; i++) {
+        const distance = calculateDistance(color, centroids[i]!);
         if (distance < minDistance) {
           minDistance = distance;
-          closestCentroid = index;
+          closestCentroid = i;
         }
-      });
+      }
       clusters[closestCentroid]!.push(color);
-    });
+    }
 
     // Calculate new centroids
-    const newCentroids = clusters.map((cluster, index) => {
-      if (cluster.length === 0) return centroids[index]!;
-      return calculateMean(cluster);
-    });
+    const newCentroids: number[][] = [];
+    for (let i = 0; i < clusters.length; i++) {
+      const cluster = clusters[i]!;
+      if (cluster.length === 0) {
+        newCentroids.push(centroids[i]!);
+      } else {
+        newCentroids.push(calculateMean(cluster));
+      }
+    }
 
     // Check for convergence
-    change = !centroids.every((centroid, index) =>
-      centroid.every((value, i) => value === newCentroids[index]![i])
-    );
+    change = false;
+    for (let i = 0; i < centroids.length; i++) {
+      const centroid = centroids[i]!;
+      const newCentroid = newCentroids[i]!;
+      for (let j = 0; j < centroid.length; j++) {
+        if (centroid[j] !== newCentroid[j]) {
+          change = true;
+          break;
+        }
+      }
+      if (change) break;
+    }
     centroids = newCentroids;
     iterations++;
   }
@@ -130,7 +145,7 @@ const kMeansClustering = (colors: number[][], k: number) => {
 const extractColorsFromImage = (
   img: HTMLImageElement,
   k = 3 // Set number of clusters
-): Colors[] => {
+): ColorsType[] => {
   const canvas = document.createElement('canvas');
   resizeImage(img, canvas, 100, 100); // Resize image to fit into 100x100
 
@@ -150,13 +165,13 @@ const extractColorsFromImage = (
   return clusteredColors.sort((a, b) => b.count - a.count);
 };
 
-export interface Colors {
+export interface ColorsType {
   colorKey: string;
   color: number[];
   count: number;
 }
 
-export interface ColorPaletteOptions {
+export interface ColorPaletteOptionsType {
   src?: string;
   imgElement?: HTMLImageElement | null;
 }
@@ -167,9 +182,9 @@ export interface ColorPaletteOptions {
  * @param options Object containing either an image `src` URL to fetch, or an active `imgElement` DOM node.
  * @returns A Promise resolving to an array of Colors containing RGB arrays and bucket densities.
  */
-const getColorPalette = async (
-  options: ColorPaletteOptions
-): Promise<Colors[]> => {
+export const getColorPalette = async (
+  options: ColorPaletteOptionsType
+): Promise<ColorsType[]> => {
   const { src, imgElement } = options;
 
   if (!src && !imgElement) {
@@ -232,5 +247,3 @@ const getColorPalette = async (
     img.src = targetSrc;
   });
 };
-
-export { getColorPalette };

@@ -1,1 +1,5 @@
-export { getColorPalette } from './getDominanteColor';
+export {
+  getColorPalette,
+  ColorsType,
+  ColorPaletteOptionsType,
+} from './getDominanteColor';

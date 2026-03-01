@@ -1,7 +1,37 @@
+# Logs
+logs/
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependency directories
+node_modules/
+
+# OS Files
 .DS_Store
-node_modules
-.cache
-dist
-example
-storybook-static
+*.pem
+
+# Build output
+dist/
+
+# General Cache
+.cache/
+
+# Testing
+coverage/
+
+# Storybook build output
+storybook-static/
+
+# Environment variables
+.env
+.env.local
+.env.test.local
+.env.production.local
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Project specific
+example/
