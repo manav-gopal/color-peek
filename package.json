@@ -33,8 +33,7 @@
     "start-storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "storybook": "yarn build-storybook && yarn start-storybook",
-    "pre-publish": "yarn test && yarn lint && yarn build",
-    "publish": "yarn pre-publish && yarn publish"
+    "pre-publish": "yarn test && yarn lint && yarn build"
   },
   "peerDependencies": {
     "react": ">=16"
